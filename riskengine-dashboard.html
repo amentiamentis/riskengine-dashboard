@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RiskEngine Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Barlow',sans-serif;background:#050a0f;color:#c8dde8;min-height:100vh;}
+:root{--accent:#00ffe0;--red:#ff3c6e;--gold:#ffd600;--panel:#080d14;--border:#0f1e2e;--muted:#2a4a5e;}
+.terminal{padding:24px;max-width:1200px;margin:0 auto;}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;}
+.hdr-left{display:flex;align-items:center;gap:12px;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.logo{font-family:'Share Tech Mono',monospace;font-size:20px;color:#fff;letter-spacing:3px;}
+.logo span{color:var(--accent);}
+.mode-badge{font-family:'Share Tech Mono',monospace;font-size:10px;background:#0a1f0a;border:1px solid #1a4a1a;color:#00ff88;padding:4px 12px;border-radius:3px;letter-spacing:2px;}
+.ticker-bar{display:flex;gap:24px;padding:10px 16px;border:1px solid var(--border);border-radius:6px;background:#060c14;margin-bottom:16px;flex-wrap:wrap;}
+.ticker-item{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center;}
+.ticker-item .price{color:#fff;}
+.ticker-item .up{color:#00ff88;}
+.ticker-item .dn{color:var(--red);}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:700px){.metrics{grid-template-columns:repeat(2,1fr);}}
+.metric{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:16px;}
+.metric-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.metric-value{font-size:24px;font-weight:600;color:#fff;}
+.metric-value.pos{color:var(--accent);}
+.metric-value.neg{color:var(--red);}
+.metric-value.neu{color:var(--gold);}
+.metric-sub{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-top:4px;}
+.section{background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+.section-title{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:2px;}
+.filter-row{display:flex;gap:6px;}
+.filter-btn{font-family:'Share Tech Mono',monospace;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:3px;cursor:pointer;transition:all 0.15s;}
+.filter-btn.active{border-color:var(--accent);color:var(--accent);}
+.filter-btn:hover{border-color:var(--muted);}
+.pnl-chart-wrap{padding:20px;}
+.chart-container{position:relative;width:100%;height:200px;}
+.trades-table{width:100%;border-collapse:collapse;}
+.trades-table th{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);}
+.trades-table td{padding:11px 16px;font-size:13px;border-bottom:1px solid rgba(15,30,46,0.6);vertical-align:middle;}
+.trades-table tr:last-child td{border-bottom:none;}
+.trades-table tr:hover td{background:rgba(0,255,224,0.02);}
+.asset-tag{font-family:'Share Tech Mono',monospace;font-size:13px;color:#fff;font-weight:600;}
+.side-long{color:#00ff88;font-family:'Share Tech Mono',monospace;font-size:11px;background:#0a1f0a;border:1px solid #1a3a1a;padding:2px 8px;border-radius:2px;}
+.side-short{color:var(--red);font-family:'Share Tech Mono',monospace;font-size:11px;background:#1f0a10;border:1px solid #3a1a20;padding:2px 8px;border-radius:2px;}
+.roe-pos{color:var(--accent);font-family:'Share Tech Mono',monospace;}
+.roe-neg{color:var(--red);font-family:'Share Tech Mono',monospace;}
+.roe-neu{color:var(--muted);font-family:'Share Tech Mono',monospace;}
+.status-open{background:#0a1f18;border:1px solid #1a4a30;color:#00ff88;font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.status-closed{background:#1a0a10;border:1px solid #4a1a20;color:var(--red);font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.input-row{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--border);background:#060c14;}
+.api-input{flex:1;background:#080d14;border:1px solid var(--border);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:12px;padding:10px 14px;border-radius:4px;outline:none;}
+.api-input:focus{border-color:var(--accent);}
+.api-input::placeholder{color:var(--muted);}
+.load-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:11px;padding:10px 20px;border-radius:4px;cursor:pointer;transition:all 0.15s;white-space:nowrap;letter-spacing:1px;}
+.load-btn:hover{background:rgba(0,255,224,0.08);}
+.load-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.empty-state{text-align:center;padding:48px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);line-height:2;}
+.ts{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+.mono{font-family:'Share Tech Mono',monospace;font-size:12px;}
+.reason-tag{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.refresh-info{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-left:auto;}
+</style>
+</head>
+<body>
+<div class="terminal">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="dot"></div>
+      <div class="logo">RISK<span>ENGINE</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="refresh-info" id="lastUpdate">never updated</span>
+      <div class="mode-badge">PAPER MODE</div>
+    </div>
+  </div>
+
+  <div class="ticker-bar" id="tickerBar">
+    <div class="ticker-item">ETH <span class="price" id="t-eth">loading...</span> <span id="t-eth-ch">—</span></div>
+    <div class="ticker-item">SOL <span class="price" id="t-sol">—</span> <span id="t-sol-ch">—</span></div>
+    <div class="ticker-item">BNB <span class="price" id="t-bnb">—</span> <span id="t-bnb-ch">—</span></div>
+    <div class="ticker-item">BTC <span class="price" id="t-btc">—</span> <span id="t-btc-ch">—</span></div>
+    <div class="ticker-item">INJ <span class="price" id="t-inj">—</span> <span id="t-inj-ch">—</span></div>
+    <div class="ticker-item">SUI <span class="price" id="t-sui">—</span> <span id="t-sui-ch">—</span></div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Total PnL</div>
+      <div class="metric-value neu" id="totalPnl">$0.00</div>
+      <div class="metric-sub" id="totalPnlSub">0 trades closed</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Win Rate</div>
+      <div class="metric-value" id="winRate">—</div>
+      <div class="metric-sub" id="winRateSub">— wins / — losses</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg ROE</div>
+      <div class="metric-value" id="avgRoe">—</div>
+      <div class="metric-sub">per closed trade</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Open Positions</div>
+      <div class="metric-value neu" id="openCount">0</div>
+      <div class="metric-sub" id="openSub">none active</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">CUMULATIVE PnL CURVE</div>
+    </div>
+    <div class="pnl-chart-wrap">
+      <div class="chart-container">
+        <canvas id="pnlChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-hdr">
+      <div class="section-title">TRADE LOG</div>
+      <div class="filter-row">
+        <button class="filter-btn active" onclick="filterTrades('ALL',this)">ALL</button>
+        <button class="filter-btn" onclick="filterTrades('OPEN',this)">OPEN</button>
+        <button class="filter-btn" onclick="filterTrades('CLOSED',this)">CLOSED</button>
+      </div>
+    </div>
+    <div id="tradesContainer">
+      <div class="empty-state">NO TRADES LOADED<br>paste your Google Sheet ID below and hit LOAD</div>
+    </div>
+    <div class="input-row">
+      <input class="api-input" id="sheetId" value="1VhgcKew8Rs-lDb7SASagP5PAR8a1BmvPtjaTcI0OdkY" placeholder="Google Sheet ID..." />
+      <button class="load-btn" id="loadBtn" onclick="loadSheetData()">LOAD DATA</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let allTrades = [];
+let pnlChartInstance = null;
+let currentFilter = 'ALL';
+let prevPrices = {};
+
+const SHEET_ID = '1VhgcKew8Rs-lDb7SASagP5PAR8a1BmvPtjaTcI0OdkY';
+
+async function fetchPrices() {
+  try {
+    const r = await fetch('https://api.hyperliquid.xyz/info', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({type:'allMids'})
+    });
+    const d = await r.json();
+    const pairs = [
+      {k:'ETH',id:'t-eth',ch:'t-eth-ch'},
+      {k:'SOL',id:'t-sol',ch:'t-sol-ch'},
+      {k:'BNB',id:'t-bnb',ch:'t-bnb-ch'},
+      {k:'BTC',id:'t-btc',ch:'t-btc-ch'},
+      {k:'INJ',id:'t-inj',ch:'t-inj-ch'},
+      {k:'SUI',id:'t-sui',ch:'t-sui-ch'}
+    ];
+    pairs.forEach(p => {
+      const price = parseFloat(d[p.k]);
+      if (!price) return;
+      const el = document.getElementById(p.id);
+      const chEl = document.getElementById(p.ch);
+      const prev = prevPrices[p.k] || price;
+      const chg = ((price - prev) / prev * 100).toFixed(2);
+      el.textContent = price > 1000 ? '$' + price.toFixed(0) : '$' + price.toFixed(3);
+      chEl.textContent = (chg >= 0 ? '+' : '') + chg + '%';
+      chEl.className = parseFloat(chg) >= 0 ? 'up' : 'dn';
+      prevPrices[p.k] = price;
+    });
+    document.getElementById('lastUpdate').textContent = 'prices: ' + new Date().toLocaleTimeString();
+  } catch(e) {}
+}
+
+async function loadSheetData() {
+  const sheetId = document.getElementById('sheetId').value.trim();
+  if (!sheetId) return;
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.textContent = 'LOADING...';
+
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=PaperTrades`;
+    const r = await fetch(url);
+    const text = await r.text();
+    const jsonStr = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1];
+    const json = JSON.parse(jsonStr);
+    const cols = json.table.cols.map(c => c.label);
+    const rows = json.table.rows || [];
+
+    allTrades = rows.map(row => {
+      const obj = {};
+      cols.forEach((col, i) => {
+        obj[col] = row.c[i] ? row.c[i].v : null;
+      });
+      return obj;
+    }).filter(t => t.Asset);
+
+    // Clean status (remove trailing newlines)
+    allTrades.forEach(t => {
+      if (t.Status) t.Status = t.Status.trim();
+    });
+
+    renderTrades(currentFilter);
+    updateMetrics();
+    renderChart();
+    btn.textContent = 'RELOAD';
+  } catch(e) {
+    btn.textContent = 'ERROR — retry';
+    document.getElementById('tradesContainer').innerHTML = `<div class="empty-state">FAILED TO LOAD<br><span style="font-size:9px;">make sure sheet is public (Anyone with link → Viewer)</span></div>`;
+    console.error(e);
+  }
+  btn.disabled = false;
+}
+
+function filterTrades(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderTrades(f);
+}
+
+function renderTrades(filter) {
+  const filtered = filter === 'ALL' ? allTrades : allTrades.filter(t => t.Status === filter);
+  if (!filtered.length) {
+    document.getElementById('tradesContainer').innerHTML = '<div class="empty-state">NO TRADES</div>';
+    return;
+  }
+
+  const rows = filtered.slice().reverse().map(t => {
+    const pnl = parseFloat(t['PnL$']) || 0;
+    const roe = parseFloat(t['ROE%']) || 0;
+    const isOpen = t.Status === 'OPEN';
+    const ts = t.Timestamp ? new Date(t.Timestamp).toLocaleString() : '—';
+    const entryPrice = t['Entry Price'] ? '$' + parseFloat(t['Entry Price']).toFixed(2) : '—';
+    const roeClass = isOpen ? 'roe-neu' : roe >= 0 ? 'roe-pos' : 'roe-neg';
+    const pnlClass = isOpen ? 'roe-neu' : pnl >= 0 ? 'roe-pos' : 'roe-neg';
+
+    return `<tr>
+      <td class="ts">${ts}</td>
+      <td><span class="asset-tag">${t.Asset || '—'}</span></td>
+      <td><span class="${t.Side === 'LONG' ? 'side-long' : 'side-short'}">${t.Side || '—'}</span></td>
+      <td class="mono">$${parseFloat(t.Margin || 0).toFixed(0)} / ${t.Leverage || '?'}x</td>
+      <td class="mono">${entryPrice}</td>
+      <td class="${roeClass}">${isOpen ? '—' : (roe >= 0 ? '+' : '') + roe.toFixed(1) + '%'}</td>
+      <td class="${pnlClass}">${isOpen ? '—' : (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2)}</td>
+      <td><span class="${isOpen ? 'status-open' : 'status-closed'}">${t.Status || '—'}</span></td>
+      <td class="reason-tag" title="${t['Close Reason'] || ''}">${t['Close Reason'] || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tradesContainer').innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="trades-table">
+      <thead><tr>
+        <th>TIME</th><th>ASSET</th><th>SIDE</th><th>MARGIN/LEV</th><th>ENTRY</th><th>ROE%</th><th>PnL$</th><th>STATUS</th><th>REASON</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+
+function updateMetrics() {
+  const closed = allTrades.filter(t => t.Status === 'CLOSED');
+  const open = allTrades.filter(t => t.Status === 'OPEN');
+  const totalPnl = closed.reduce((s, t) => s + (parseFloat(t['PnL$']) || 0), 0);
+  const wins = closed.filter(t => (parseFloat(t['PnL$']) || 0) > 0).length;
+  const losses = closed.length - wins;
+  const avgRoe = closed.length ? closed.reduce((s, t) => s + (parseFloat(t['ROE%']) || 0), 0) / closed.length : 0;
+
+  const pnlEl = document.getElementById('totalPnl');
+  pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '$' + totalPnl.toFixed(2);
+  pnlEl.className = 'metric-value ' + (totalPnl > 0 ? 'pos' : totalPnl < 0 ? 'neg' : 'neu');
+  document.getElementById('totalPnlSub').textContent = closed.length + ' trades closed';
+
+  const wrEl = document.getElementById('winRate');
+  const wr = closed.length ? (wins / closed.length * 100).toFixed(0) : null;
+  wrEl.textContent = wr !== null ? wr + '%' : '—';
+  wrEl.className = 'metric-value ' + (wr >= 50 ? 'pos' : wr !== null ? 'neg' : '');
+  document.getElementById('winRateSub').textContent = wins + ' wins / ' + losses + ' losses';
+
+  const roeEl = document.getElementById('avgRoe');
+  roeEl.textContent = closed.length ? (avgRoe >= 0 ? '+' : '') + avgRoe.toFixed(1) + '%' : '—';
+  roeEl.className = 'metric-value ' + (avgRoe > 0 ? 'pos' : avgRoe < 0 ? 'neg' : '');
+
+  document.getElementById('openCount').textContent = open.length;
+  document.getElementById('openSub').textContent = open.length ? open.map(t => t.Asset).join(', ') : 'none active';
+}
+
+function renderChart() {
+  const closed = allTrades.filter(t => t.Status === 'CLOSED');
+  if (!closed.length) return;
+
+  let cumulative = 0;
+  const labels = [];
+  const data = closed.map((t, i) => {
+    cumulative += parseFloat(t['PnL$']) || 0;
+    labels.push('#' + (i + 1) + ' ' + (t.Asset || ''));
+    return parseFloat(cumulative.toFixed(2));
+  });
+
+  if (pnlChartInstance) pnlChartInstance.destroy();
+
+  const lastVal = data[data.length - 1] || 0;
+  const lineColor = lastVal >= 0 ? '#00ffe0' : '#ff3c6e';
+  const fillColor = lastVal >= 0 ? 'rgba(0,255,224,0.06)' : 'rgba(255,60,110,0.06)';
+
+  pnlChartInstance = new Chart(document.getElementById('pnlChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cumulative PnL ($)',
+        data,
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2,
+        pointRadius: 5,
+        pointBackgroundColor: data.map(v => v >= 0 ? '#00ffe0' : '#ff3c6e'),
+        pointBorderColor: 'transparent',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#2a4a5e', font: { family: 'Share Tech Mono', size: 9 }, maxRotation: 45 },
+          grid: { color: 'rgba(15,30,46,0.8)' }
+        },
+        y: {
+          ticks: { color: '#2a4a5e', font: { family: 'Share Tech Mono', size: 9 }, callback: v => '$' + v.toFixed(2) },
+          grid: { color: 'rgba(15,30,46,0.8)' }
+        }
+      }
+    }
+  });
+}
+
+fetchPrices();
+setInterval(fetchPrices, 15000);
+loadSheetData();
+</script>
+</body>
+</html>
